@@ -283,10 +283,11 @@ function draftToField(d: DraftField): SchemaField {
 
 const TYPE_LABELS: Record<FieldType, string> = { text: 'Text', enum: 'Choice', user: 'User', date: 'Date', follow: 'Follow' };
 
-function SchemaEditor({ initial, onSave, onCancel }: {
+function SchemaEditor({ initial, onSave, onCancel, titleText }: {
   initial: IssueSchema;
   onSave: (schema: IssueSchema) => Promise<void>;
   onCancel: () => void;
+  titleText?: string;
 }) {
   const [fields, setFields] = React.useState<DraftField[]>(() => initial.fields.map(fieldToDraft));
   const [selectedKey, setSelectedKey] = React.useState<string | null>(initial.fields[0]?.key ?? null);
@@ -343,7 +344,7 @@ function SchemaEditor({ initial, onSave, onCancel }: {
     <div style={s.overlay} role="dialog" aria-modal="true" aria-label="Edit issue tracker schema">
       <div style={{ ...s.dialog, maxWidth: 580 }}>
         <div style={s.dialogHeader}>
-          <strong>Configure Issue Tracker Schema</strong>
+          <strong>{titleText ?? 'Configure Issue Tracker Schema'}</strong>
           <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1 }} aria-label="Close">×</button>
         </div>
         <form onSubmit={handleSave} id="schema-editor-form" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -707,7 +708,7 @@ export function IssueBoardWidget({ widgetApi }: Props) {
         if (cancelled) return;
 
         const rawSchema = (schemaEvents[0]?.content as any);
-        setSchema(rawSchema?.fields ? (rawSchema as IssueSchema) : DEFAULT_ISSUE_SCHEMA);
+        setSchema(rawSchema?.fields ? (rawSchema as IssueSchema) : null);
 
         setIssues(
           issueEvents
@@ -790,8 +791,6 @@ export function IssueBoardWidget({ widgetApi }: Props) {
     await widgetApi.sendStateEvent('eu.kiefte.issues.schema', '', newSchema);
   }, [widgetApi]);
 
-  const effectiveSchema = schema ?? DEFAULT_ISSUE_SCHEMA;
-  const kanbanField = effectiveSchema.fields.find(f => f.kanban_group && f.type === 'enum');
   const activeIssues = useMemo(
     () => issues.filter(i => !i.content._deleted).sort((a, b) => b.ts - a.ts),
     [issues]
@@ -813,6 +812,30 @@ export function IssueBoardWidget({ widgetApi }: Props) {
       </div>
     );
   }
+
+  if (!schema) {
+    if (!canWrite) {
+      return (
+        <div style={{ ...s.centered, flexDirection: 'column', gap: 8, padding: 24, textAlign: 'center' }}>
+          <span style={{ fontSize: 32 }}>📋</span>
+          <div style={{ fontWeight: 600 }}>Issue Tracker Not Set Up</div>
+          <div style={s.muted}>Ask a room admin to initialize the issue tracker.</div>
+        </div>
+      );
+    }
+    return (
+      <SchemaEditor
+        initial={DEFAULT_ISSUE_SCHEMA}
+        titleText="Initialize Issue Tracker"
+        onSave={doSaveSchema}
+        onCancel={() => {}}
+      />
+    );
+  }
+
+  // schema is non-null past this point
+  const effectiveSchema = schema;
+  const kanbanField = effectiveSchema.fields.find(f => f.kanban_group && f.type === 'enum');
 
   return (
     <div style={s.container}>
