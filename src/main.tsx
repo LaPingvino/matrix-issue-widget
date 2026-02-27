@@ -15,6 +15,12 @@ widgetApi.requestCapabilityToSendState('eu.kiefte.issue');
 widgetApi.requestCapabilityToSendState('eu.kiefte.issues.schema');
 widgetApi.requestCapabilityToReceiveState('m.room.power_levels');
 
+// Timeline event capabilities for comments, reactions, and mentions
+widgetApi.requestCapabilityToReceiveEvent('m.room.message');
+widgetApi.requestCapabilityToSendEvent('m.room.message');
+widgetApi.requestCapabilityToReceiveEvent('m.reaction');
+widgetApi.requestCapabilityToSendEvent('m.reaction');
+
 widgetApi.start();
 
 let rendered = false;
